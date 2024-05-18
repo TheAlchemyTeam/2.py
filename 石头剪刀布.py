@@ -1,5 +1,5 @@
 import tkinter as tk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps
 import random
 
 class RockPaperScissorsGame:
@@ -10,7 +10,7 @@ class RockPaperScissorsGame:
         self.player_score = 0
         self.computer_score = 0
         self.round_count = 0
-        self.max_rounds = 0
+        self.max_rounds = None  # None means unlimited rounds
 
         self.canvas = tk.Canvas(self.master, width=800, height=400)
         self.canvas.pack()
@@ -36,6 +36,9 @@ class RockPaperScissorsGame:
         self.score_label = tk.Label(self.master, text=f"玩家分数: {self.player_score}  电脑分数: {self.computer_score}")
         self.score_label.pack()
 
+        self.rounds_label = tk.Label(self.master, text="请输入对局次数（留空则为无限制）：")
+        self.rounds_label.pack()
+
         self.rounds_entry = tk.Entry(self.master)
         self.rounds_entry.pack()
 
@@ -43,6 +46,9 @@ class RockPaperScissorsGame:
         self.start_button.pack()
 
     def play_round(self, player_choice):
+        if self.max_rounds is not None and self.round_count >= self.max_rounds:
+            return
+
         choices = ["rock", "paper", "scissors"]
         computer_choice = random.choice(choices)
 
@@ -72,14 +78,18 @@ class RockPaperScissorsGame:
         self.round_count += 1
         self.score_label.config(text=f"玩家分数: {self.player_score}  电脑分数: {self.computer_score}")
 
-        if self.round_count >= self.max_rounds:
+        if self.max_rounds is not None and self.round_count >= self.max_rounds:
             self.end_game()
 
     def start_game(self):
         try:
-            self.max_rounds = int(self.rounds_entry.get())
+            rounds = self.rounds_entry.get()
+            if rounds:
+                self.max_rounds = int(rounds)
+            else:
+                self.max_rounds = None
         except ValueError:
-            self.max_rounds = 0
+            self.max_rounds = None
 
         self.label.config(text="比赛开始！")
         self.round_count = 0
@@ -100,6 +110,7 @@ class RockPaperScissorsGame:
         self.round_count = 0
         self.player_score = 0
         self.computer_score = 0
+        self.max_rounds = None
         self.score_label.config(text=f"玩家分数: {self.player_score}  电脑分数: {self.computer_score}")
         self.label.config(text="游戏已重置，请重新开始比赛。")
 
@@ -118,33 +129,29 @@ class RockPaperScissorsGame:
             player_hand_img = Image.open(images[player_choice]).resize((150, 150), Image.LANCZOS)
             computer_hand_img = Image.open(images[computer_choice]).resize((150, 150), Image.LANCZOS)
 
+            # Mirror the computer hand image to make it face the player hand image
+            computer_hand_img = ImageOps.mirror(computer_hand_img)
+
             # Convert images to tkinter format
-            player_hand_tk = ImageTk.PhotoImage(player_hand_img)
-            computer_hand_tk = ImageTk.PhotoImage(computer_hand_img)
+            self.player_hand_tk = ImageTk.PhotoImage(player_hand_img)
+            self.computer_hand_tk = ImageTk.PhotoImage(computer_hand_img)
 
             # Display images on the canvas
-            self.canvas.create_image(100, 100, image=player_hand_tk)
-            self.canvas.create_image(300, 100, image=computer_hand_tk)
+            self.canvas.create_image(200, 150, image=self.player_hand_tk)
+            self.canvas.create_image(600, 150, image=self.computer_hand_tk)
 
             # Show result text
-            self.canvas.create_text(200, 180, text=result, fill="black", font=("Helvetica", 16))
-
-            # Update the canvas to display the changes
-            self.canvas.update_idletasks()
+            result_text = self.canvas.create_text(400, 300, text=result, fill="black", font=("Helvetica", 16))
 
             # Animate the result text by changing its position
-            for i in range(180, 300, 10):
-                self.canvas.move("text", 0, i)
-                self.master.after(50)  # Wait 50 milliseconds
+            for i in range(0, 30):
+                self.canvas.move(result_text, 0, -1)
+                self.master.update()
+                self.master.after(50)
 
         except FileNotFoundError as e:
             print(e)
             self.label.config(text="图片文件未找到，请检查路径。")
-
-        # Free up the images to prevent memory leaks
-        player_hand_tk._photo = None
-        computer_hand_tk._photo = None
-
 
 if __name__ == "__main__":
     root = tk.Tk()
